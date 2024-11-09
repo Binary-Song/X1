@@ -15,16 +15,16 @@ class X1_API AX1PlayerController : public APlayerController
     GENERATED_BODY()
 
 public:
-    UPROPERTY(BlueprintReadWrite)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     class UInputMappingContext *InputMappingContext;
 
 protected:
     virtual void BeginPlay() override;
 
 private:
-    void OnInputAction_MoveForward(const struct FInputActionInstance& Instance);
-    void OnInputAction_MoveRight(const struct FInputActionInstance& Instance);
-    void OnInputAction_Look(const struct FInputActionInstance& Instance);
+    void OnInputAction_MoveForward(const struct FInputActionInstance &Instance);
+    void OnInputAction_MoveRight(const struct FInputActionInstance &Instance);
+    void OnInputAction_Look(const struct FInputActionInstance &Instance);
 
     void Jump();
     void MoveRight(float Value);

@@ -9,33 +9,45 @@
 #include "Engine/LocalPlayer.h"
 #include "Templates/Casts.h"
 #include "EnhancedInputComponent.h"
+#include "X1Assert.h"
 #include <cassert>
 void AX1PlayerController::BeginPlay()
 {
     // Get the local player subsystem
     auto EnhancedInputSubsystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-    if (!EnhancedInputSubsystem)
-        return;
+    X1_ASSERT_RET_VOID(EnhancedInputSubsystem);
+
     auto EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent);
-    if (!EnhancedInputComponent)
-        return;
+    X1_ASSERT_RET_VOID(EnhancedInputComponent);
 
     EnhancedInputSubsystem->AddMappingContext(InputMappingContext, 0);
-
-    if (!InputMappingContext)
-        return;
+    X1_ASSERT_RET_VOID(InputMappingContext);
 
     auto Mappings = InputMappingContext->GetMappings();
-    verify(Mappings[0].GetMappingName() == "MoveForward");
-    verify(Mappings[1].GetMappingName() == "MoveForward");
-    verify(Mappings[2].GetMappingName() == "MoveForward");
 
-    EnhancedInputComponent->BindAction(Mappings[0].Action, ETriggerEvent::Triggered, this,
-                                       &AX1PlayerController::OnInputAction_Look);
-    EnhancedInputComponent->BindAction(Mappings[1].Action, ETriggerEvent::Triggered, this,
-                                       &AX1PlayerController::OnInputAction_MoveForward);
-    EnhancedInputComponent->BindAction(Mappings[2].Action, ETriggerEvent::Triggered, this,
-                                       &AX1PlayerController::OnInputAction_MoveRight);
+    for (auto &&Map : Mappings)
+    {
+        FName ActionName = Map.Action.GetFName();
+        if (ActionName == FName(TEXT("IA_X1Look")))
+        {
+            EnhancedInputComponent->BindAction(Map.Action, ETriggerEvent::Triggered, this,
+                                               &AX1PlayerController::OnInputAction_Look);
+        }
+        else if (ActionName == FName(TEXT("IA_X1MoveForward")))
+        {
+            EnhancedInputComponent->BindAction(Map.Action, ETriggerEvent::Triggered, this,
+                                               &AX1PlayerController::OnInputAction_MoveForward);
+        }
+        else if (ActionName == FName(TEXT("IA_X1MoveRight")))
+        {
+            EnhancedInputComponent->BindAction(Map.Action, ETriggerEvent::Triggered, this,
+                                               &AX1PlayerController::OnInputAction_MoveRight);
+        }
+        else
+        {
+            X1_ASSERTF_CONTINUE(0, "unknown map name: %s", *ActionName.ToString());
+        }
+    }
 }
 
 void AX1PlayerController::OnInputAction_MoveForward(const struct FInputActionInstance &Instance)
