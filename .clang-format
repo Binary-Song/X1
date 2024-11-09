@@ -1,0 +1,7 @@
+---
+Language:        Cpp
+BasedOnStyle:  Microsoft
+IndentAccessModifiers: false
+AccessModifierOffset: -4
+SortIncludes: false
+QualifierAlignment: Left
