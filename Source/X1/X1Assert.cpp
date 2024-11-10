@@ -8,7 +8,9 @@ DEFINE_LOG_CATEGORY(LogAssert);
 thread_local std::map<FString, int> codes;
 thread_local int nextId = 0;
 
-void X1AssertionFailed(const char *file, int line, const char *condition, FString userMessage)
+void _X1AssertionHelper::X1AssertionFailed_WithCustomLog(
+    const char *file, int line, const char *cond, const FString &userMessage,
+    const std::function<void(const FString &)> &logFunc)
 {
     FString src;
     src.Reserve(strlen(file) + 6);
@@ -27,12 +29,25 @@ void X1AssertionFailed(const char *file, int line, const char *condition, FStrin
     message.Append("Assert! Msg=");
     message.Append(userMessage);
     message.Append(", Cond=");
-    message.Append(condition);
+    message.Append(cond);
     message.Append(", Src=");
     message.Append(src);
 
     if (GEngine)
-        GEngine->AddOnScreenDebugMessage(id, 5.f, FColor::Red, message);
+        GEngine->AddOnScreenDebugMessage(id, 20.f, FColor::Red, message);
     if (isNew)
-        UE_LOG(LogAssert, Error, TEXT("%s"), *message);
+    {
+        logFunc(message);
+    }
+}
+
+void _X1AssertionHelper::X1AssertionFailed(const char *file, int line,
+                                           const char *cond,
+                                           const FString &message)
+{
+
+    _X1AssertionHelper::X1AssertionFailed_WithCustomLog(
+        file, line, cond, message, [&](const FString &message) {
+            UE_LOG(LogAssert, Error, TEXT("%s"), *message);
+        });
 }
