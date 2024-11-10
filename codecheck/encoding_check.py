@@ -4,17 +4,35 @@ import subprocess
 import logging
 from pathlib import Path
 
+repo_path = (Path(__file__) / ".." / "..").resolve()
+log_path = (repo_path / "log").resolve()
+os.makedirs(log_path, exist_ok=True)
+bad_files = set()
+
+log_format = "%(levelname)s - %(message)s"
+logging.basicConfig(level=logging.ERROR, format=log_format, handlers=[
+    logging.FileHandler(log_path / "encoding_check.log"),
+    logging.StreamHandler(sys.stdout)
+])
+
+bom_bytes = b'\xef\xbb\xbf'
+
+def report_bad_file(file_path, message):
+    if file_path not in bad_files:
+        bad_files.add(file_path)
+        logging.error(message)
+
 def check_encoding(file_path):
     try:
         with open(file_path, 'rb') as f:
             raw_data = f.read()
-            if raw_data.startswith(b'\xef\xbb\xbf'):
-                logging.error(f"File {file_path} contains BOM.")
+            if raw_data.contains(bom_bytes):
+                report_bad_file(file_path, f"{file_path} contains BOM.")
                 return False
             raw_data.decode('utf-8')
 
     except UnicodeDecodeError:
-        logging.error(f"File {file_path} is not UTF-8 encoded.")
+        report_bad_file(file_path, f"{file_path} is not UTF-8 encoded.")
         return False
     return True
 
@@ -26,7 +44,7 @@ def check_repo_encoding(repo_path):
         for file_info in files:
             parts = file_info.split()
             if len(parts) < 4:
-                logging.error(f"Failed to parse git ls-files output: {file_info}")
+                report_bad_file(file_info, f"failed to parse git ls-files output: {file_info}")
                 all_files_passed = False
                 continue
             index_eol, workdir_eol, attr, file_rel_path = parts[0], parts[1], parts[2], parts[3]
@@ -56,35 +74,32 @@ def check_diff(repo_path : Path, incremental=False):
 
     ok = True
     current_file = "<unknown>"
-    bad_file_set = set()
     for i, line in enumerate(output.split(b'\n'), start=1):
+        
+        # Set current file
         if line.startswith(b'diff --git'):
             # current_file example: b/src/test/extension.test.ts
             current_file = line.split()[-1].decode('utf-8')
-            if current_file.startswith('b/') or current_file.startswith('a/'):
+            if current_file.startswith('a/') or current_file.startswith('b/'):
                 # current_file example: src/test/extension.test.ts
                 current_file = current_file[2:]
+        
         if b'\r' in line:
-            if current_file not in bad_file_set:
-                bad_file_set.add(current_file)
-                logging.error(f"Staged area diff: CR character in file {current_file}, see {diff_path}:{i}. Only LF line ending is allowed.")
+            report_bad_file(current_file, f"CR in file {current_file}, see {diff_path}:{i}")
             ok = False
-    
+        if bom_bytes in line:
+            report_bad_file(current_file, f"BOM in file {current_file}, see {diff_path}:{i}")
+            ok = False
     return ok
 
 if __name__ == "__main__":
-    repo_path = (Path(__file__) / ".." / "..").resolve()
-    log_path = (repo_path / "log").resolve()
-    os.makedirs("log", exist_ok=True)
     passed = True
-    if not check_repo_encoding(repo_path):
-        passed = False
 
-    if not check_diff(repo_path, incremental=False):
-        passed = False
-    
-    if passed:
-        logging.info("Encoding checks passed.")
-        sys.exit(0)
-    else:
+    def failed():
         sys.exit(1)
+
+    if not check_diff(repo_path, incremental=True):
+        failed()
+    
+    logging.info("encoding check passed")
+    sys.exit(0)
