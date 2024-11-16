@@ -22,13 +22,16 @@ protected:
     virtual void BeginPlay() override;
 
 private:
+    void SetupInput();
+    void SetupCamera();
+
     void OnInputAction_MoveForward(const struct FInputActionInstance &Instance);
     void OnInputAction_MoveRight(const struct FInputActionInstance &Instance);
     void OnInputAction_Look(const struct FInputActionInstance &Instance);
-
-    void Jump();
-    void MoveRight(float Value);
-    void MoveForward(float Value);
-    void AddYaw(float Value);
-    void AddPitch(float Value);
+    void OnInputAction_Interact(const struct FInputActionInstance &Instance);
+    void HandleInput_MoveRight(float Value);
+    void HandleInput_MoveForward(float Value);
+    void HandleInput_Yaw(float Value);
+    void HandleInput_Pitch(float Value);
+    void HandleInput_Interact(float Value);
 };

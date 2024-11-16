@@ -3,7 +3,6 @@
 #include "Logging/StructuredLog.h"
 #include <format>
 #include <functional>
-
 DECLARE_LOG_CATEGORY_EXTERN(LogAssert, Log, All);
 
 // use assertion macros instead
@@ -46,13 +45,24 @@ public:
     }
 
 // clang-format off
-#define X1_ASSERTF_RET_VOID(cond, fmt, ...) _X1_ASSERT_RET_IMPL(cond, return, FString::Printf(TEXT(fmt), __VA_ARGS__))
-#define X1_ASSERTF_RET_EMPTY(cond, fmt, ...) _X1_ASSERT_RET_IMPL(cond, return {}, FString::Printf(TEXT(fmt), __VA_ARGS__))
-#define X1_ASSERTF_CONTINUE(cond, fmt, ...) _X1_ASSERT_RET_IMPL(cond, continue, FString::Printf(TEXT(fmt), __VA_ARGS__))
+
+// 当条件不满足时，在屏幕和Log输出消息，并从当前函数返回（不会导致程序崩溃）。
+// ASSERT: 不指定消息
+// ASSERTF: 使用 FString::Printf 格式化消息，使用C风格格式串
+// ASSERTX: 使用 FString::Format 指定消息，使用 `{}` 风格格式串
+// RET_VOID: 条件不满足时返回 void
+// RET_EMPTY: 条件不满足时返回 {}
+// RET_CONTINUE: 条件不满足时继续下个循环 （continue）
+#define X1_ASSERTF_RET_VOID(cond, fmt, ...) _X1_ASSERT_RET_IMPL(cond,  return     , FString::Printf(TEXT(fmt), __VA_ARGS__))
+#define X1_ASSERTF_RET_EMPTY(cond, fmt, ...) _X1_ASSERT_RET_IMPL(cond, return {}  , FString::Printf(TEXT(fmt), __VA_ARGS__))
+#define X1_ASSERTF_CONTINUE(cond, fmt, ...) _X1_ASSERT_RET_IMPL(cond,  continue   , FString::Printf(TEXT(fmt), __VA_ARGS__))
+#define X1_ASSERTF_IGNORE(cond, fmt, ...) _X1_ASSERT_RET_IMPL(cond,    ;          , FString::Printf(TEXT(fmt), __VA_ARGS__))
 #define X1_ASSERT_RET_VOID(cond) _X1_ASSERT_RET_IMPL(cond, return, {})
 #define X1_ASSERT_RET_EMPTY(cond) _X1_ASSERT_RET_IMPL(cond, return {}, {})
 #define X1_ASSERT_CONTINUE(cond) _X1_ASSERT_RET_IMPL(cond, continue, {})
+#define X1_ASSERT_IGNORE(cond) _X1_ASSERT_RET_IMPL(cond, ;, {})
 #define X1_ASSERTX_RET_VOID(cond, fmt, ...) _X1_ASSERT_RET_IMPL2(cond, return, fmt, __VA_ARGS__)
 #define X1_ASSERTX_RET_EMPTY(cond, fmt, ...) _X1_ASSERT_RET_IMPL2(cond, return {}, fmt, __VA_ARGS__)
 #define X1_ASSERTX_CONTINUE(cond, fmt, ...) _X1_ASSERT_RET_IMPL2(cond, continue, fmt, __VA_ARGS__)
+#define X1_ASSERTX_IGNORE(cond, fmt, ...) _X1_ASSERT_RET_IMPL2(cond, ;, fmt, __VA_ARGS__)
 // clang-format on
