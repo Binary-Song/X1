@@ -2,6 +2,7 @@
 
 #include "X1PlayerController.h"
 #include "CoreGlobals.h"
+#include "Engine/EngineTypes.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/Pawn.h"
@@ -9,12 +10,15 @@
 #include "InputMappingContext.h"
 #include "InputAction.h"
 #include "Engine/LocalPlayer.h"
+#include "InputTriggers.h"
 #include "Logging/LogVerbosity.h"
 #include "Logging/StructuredLog.h"
 #include "Math/MathFwd.h"
 #include "Math/Vector2D.h"
 #include "Templates/Casts.h"
 #include "EnhancedInputComponent.h"
+#include "GameFramework/PawnMovementComponent.h"
+#include "UObject/NameTypes.h"
 #include "X1Assert.h"
 #include <cassert>
 #include <set>
@@ -22,11 +26,24 @@
 #include "X1Interactable.h"
 #include "X1TraceUtils.h"
 #include "X1CollectionUtils.h"
-
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "X1Zoom.h"
+#include "X1Format.h"
 void AX1PlayerController::BeginPlay()
 {
     SetupInput();
     SetupCamera();
+    this->SetShowMouseCursor(true);
+}
+
+static void CheckSets(TSet<FName> &ActionNamesInMapping,
+                      TSet<FName> &ExpectedActionNames)
+{
+    TSet<FName> Diff = ExpectedActionNames.Difference(ActionNamesInMapping);
+    X1_ASSERT_PASS(Diff.Num() == 0, "unregistered actions {0}", DbgFmt(Diff));
+    Diff = ActionNamesInMapping.Difference(ExpectedActionNames);
+    X1_ASSERT_PASS(Diff.Num() == 0, "unexpected actions {0}", DbgFmt(Diff));
 }
 
 void AX1PlayerController::SetupInput()
@@ -45,51 +62,47 @@ void AX1PlayerController::SetupInput()
 
     auto Mappings = InputMappingContext->GetMappings();
 
-    TSet<FName> ActionNames = {
-        TEXT("IA_X1Look"),
-        TEXT("IA_X1MoveForward"),
-        TEXT("IA_X1MoveRight"),
-        TEXT("IA_X1Interact"),
+    using InputCallback =
+        void (AX1PlayerController::*)(const FInputActionInstance &Instance);
+
+    struct ActionData
+    {
+        ETriggerEvent Trigger;
+        InputCallback Callback;
     };
+
+    // clang-format off
+    TMap<FName, ActionData> ActionNames =
+    {
+        { TEXT("IA_X1Look"),            {ETriggerEvent::Triggered,   &AX1PlayerController::OnInputAction_Look         }},
+        { TEXT("IA_X1MoveForward"),     {ETriggerEvent::Triggered,   &AX1PlayerController::OnInputAction_MoveForward  }},
+        { TEXT("IA_X1MoveRight"),       {ETriggerEvent::Triggered,   &AX1PlayerController::OnInputAction_MoveRight    }},
+        { TEXT("IA_X1Interact"),        {ETriggerEvent::Started,     &AX1PlayerController::OnInputAction_Interact     }},
+        { TEXT("IA_X1Fly"),             {ETriggerEvent::Triggered,   &AX1PlayerController::OnInputAction_Fly          }},
+        { TEXT("IA_X1SwitchFlyMode"),   {ETriggerEvent::Started,     &AX1PlayerController::OnInputAction_SwitchFlyMode}},
+        { TEXT("IA_X1Zoom"),            {ETriggerEvent::Started,     &AX1PlayerController::OnInputAction_Zoom         }},
+    };
+    // clang-format on
+
+    TSet<FName> ActionNamesInMapping;
+    for (auto &&Map : Mappings)
+        ActionNamesInMapping.Add(Map.Action.GetFName());
+
+    TSet<FName> ExpectedActionNames;
+    ActionNames.GetKeys(ExpectedActionNames);
+
+    CheckSets(ActionNamesInMapping, ExpectedActionNames);
+
     for (auto &&Map : Mappings)
     {
         const FName ActionName = Map.Action.GetFName();
-        ActionNames.Remove(ActionName);
-        if (ActionName == FName(TEXT("IA_X1Look")))
+        if (ActionData *Data = ActionNames.Find(ActionName))
         {
-            EnhancedInputComponent->BindAction(
-                Map.Action, ETriggerEvent::Triggered, this,
-                &AX1PlayerController::OnInputAction_Look);
-        }
-        else if (ActionName == FName(TEXT("IA_X1MoveForward")))
-        {
-            EnhancedInputComponent->BindAction(
-                Map.Action, ETriggerEvent::Triggered, this,
-                &AX1PlayerController::OnInputAction_MoveForward);
-        }
-        else if (ActionName == FName(TEXT("IA_X1MoveRight")))
-        {
-            EnhancedInputComponent->BindAction(
-                Map.Action, ETriggerEvent::Triggered, this,
-                &AX1PlayerController::OnInputAction_MoveRight);
-        }
-        else if (ActionName == FName(TEXT("IA_X1Interact")))
-        {
-            EnhancedInputComponent->BindAction(
-                Map.Action, ETriggerEvent::Started, this,
-                &AX1PlayerController::OnInputAction_Interact);
-        }
-        else
-        {
-            X1_ASSERTX_CONTINUE(0, "unknown mapping name: {0}",
-                                ActionName.ToString());
+            EnhancedInputComponent->BindAction(Map.Action, Data->Trigger, this,
+                                               Data->Callback);
         }
     }
-
-    X1_ASSERTX_IGNORE(ActionNames.Num() == 0, "{0} unregistered actions",
-                      ActionNames.Num());
-}
-
+};
 void AX1PlayerController::SetupCamera()
 {
     X1_ASSERT_RET_VOID(PlayerCameraManager);
@@ -121,6 +134,24 @@ void AX1PlayerController::OnInputAction_Interact(
     const struct FInputActionInstance &Instance)
 {
     this->HandleInput_Interact(Instance.GetValue().Get<float>());
+}
+
+void AX1PlayerController::OnInputAction_Fly(
+    const struct FInputActionInstance &Instance)
+{
+    this->HandleInput_Fly(Instance.GetValue().Get<float>());
+}
+
+void AX1PlayerController::OnInputAction_SwitchFlyMode(
+    const struct FInputActionInstance &Instance)
+{
+    this->HandleInput_SwitchFlyMode();
+}
+
+void AX1PlayerController::OnInputAction_Zoom(
+    const struct FInputActionInstance &Instance)
+{
+    this->HandleInput_Zoom(-50 * Instance.GetValue().Get<float>());
 }
 
 // 注意区别： ControlRotation 是视角朝向， Actor 的 forward 是角色模型的朝向
@@ -212,4 +243,30 @@ void AX1PlayerController::HandleInput_Interact(float Value)
         IX1Grabber::Execute_Ungrab(GetPawn());
         IX1Grabber::Execute_Grab(GetPawn(), GrabParam);
     }
+}
+
+void AX1PlayerController::HandleInput_Fly(float value)
+{
+    X1_ASSERT_RET_VOID(GetPawn());
+    GetPawn()->AddMovementInput(FVector::UpVector, value);
+}
+
+void AX1PlayerController::HandleInput_SwitchFlyMode()
+{
+    X1_ASSERT_RET_VOID(GetCharacter());
+    auto Movement = GetCharacter()->GetCharacterMovement();
+    X1_ASSERT_RET_VOID(Movement);
+    if (!bIsFlying)
+        Movement->SetMovementMode(MOVE_Flying);
+    else
+        Movement->SetMovementMode(MOVE_Walking);
+    bIsFlying = !bIsFlying;
+    Movement->BrakingDecelerationFlying = 2048.0f;
+}
+
+void AX1PlayerController::HandleInput_Zoom(float value)
+{
+    X1_ASSERT_RET_VOID(GetPawn());
+    X1_ASSERT_RET_VOID(GetPawn()->Implements<UX1Zoom>());
+    IX1Zoom::Execute_Zoom(GetPawn(), value);
 }

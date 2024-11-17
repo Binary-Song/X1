@@ -7,13 +7,13 @@
 DEFINE_LOG_CATEGORY(LogAssert);
 thread_local int nextId = 0;
 
-void _X1AssertionHelper::Log(X1LogExtras type, const char *file, int line,
+void _X1AssertionHelper::Log(_X1LogExtras type, const char *file, int line,
                              const char *cond, const FString &userMessage)
 {
     const FString message = [&]() {
         FString message; 
         message.Reserve(userMessage.Len() + strlen(file) + 30);
-        if (type.type == X1LogType::Assert)
+        if (type.type == _X1LogType::Assert)
             message.Append("Assert! ");
         else
             message.Append("Log ");
@@ -23,7 +23,7 @@ void _X1AssertionHelper::Log(X1LogExtras type, const char *file, int line,
             message.Append(userMessage);
             message.Append(", ");
         }
-        if (type.type == X1LogType::Assert)
+        if (type.type == _X1LogType::Assert)
         {
             message.Append("Cond=");
             message.Append(cond);

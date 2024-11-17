@@ -72,7 +72,7 @@ void FX1TraceUtils::TraceSearch(FX1TraceSearchResult &Result, APlayerController 
                 dedup.insert(actor);
             }
             tracesLeft--;
-            X1_ASSERTX_RET_VOID(tracesLeft, "{}", "too many traces");
+            X1_ASSERT_RET_VOID(tracesLeft, "{}", "too many traces");
         }
     }
 }
