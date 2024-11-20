@@ -3,6 +3,7 @@
 -IE:\UEProjects\X1\Source
 -IE:\UEProjects\X1\Source\X1\Private
 -IE:\UEProjects\X1\Source\X1\Public
+-IE:\UE_5.4\Engine\Source\Editor\UnrealEd\Public
 -IE:\UE_5.4\Engine\Intermediate\Build\Win64\UnrealEditor\Inc\ActorPickerMode\UHT
 -IE:\UE_5.4\Engine\Intermediate\Build\Win64\UnrealEditor\Inc\ActorPickerMode\VNI
 -IE:\UE_5.4\Engine\Intermediate\Build\Win64\UnrealEditor\Inc\AdvancedPreviewScene\UHT

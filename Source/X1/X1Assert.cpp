@@ -4,26 +4,31 @@
 #include <format>
 #include <map>
 #include <string>
-DEFINE_LOG_CATEGORY(LogAssert);
+
+DEFINE_LOG_CATEGORY(LogX1Assert);
+DEFINE_LOG_CATEGORY(LogX1);
+
 thread_local int nextId = 0;
 
-void _X1AssertionHelper::Log(_X1LogExtras type, const char *file, int line,
-                             const char *cond, const FString &userMessage)
+void _X1AssertionHelper::Log(_X1LogExtras ex,
+                             const char *file,
+                             int line,
+                             const char *cond,
+                             const FString &userMessage)
 {
     const FString message = [&]() {
-        FString message; 
+        FString message;
         message.Reserve(userMessage.Len() + strlen(file) + 30);
-        if (type.type == _X1LogType::Assert)
-            message.Append("Assert! ");
+        if (ex.type == _X1LogType::Assert)
+            message.Append("Assert: ");
         else
-            message.Append("Log ");
+            message.Append("Log: ");
         if (userMessage.Len() > 0)
         {
-            message.Append("Msg=");
             message.Append(userMessage);
             message.Append(", ");
         }
-        if (type.type == _X1LogType::Assert)
+        if (ex.type == _X1LogType::Assert)
         {
             message.Append("Cond=");
             message.Append(cond);
@@ -35,7 +40,7 @@ void _X1AssertionHelper::Log(_X1LogExtras type, const char *file, int line,
         message.Append(FString::FromInt(line));
         return message;
     }();
-    _X1AssertionHelper::LogToScreenAndConsole(message, type.bRepeat);
+    _X1AssertionHelper::LogToScreenAndConsole(ex, message, ex.bRepeat);
 }
 
 struct MessageDeduplicate
@@ -58,7 +63,8 @@ private:
     std::map<FString, int> m_map;
 };
 
-void _X1AssertionHelper::LogToScreenAndConsole(const FString &message,
+void _X1AssertionHelper::LogToScreenAndConsole(const _X1LogExtras &ex,
+                                               const FString &message,
                                                bool bRepeatable)
 {
     thread_local MessageDeduplicate md;
@@ -70,8 +76,29 @@ void _X1AssertionHelper::LogToScreenAndConsole(const FString &message,
         bNew = true;
     }
 
+    FColor LogColor = FColor::Red;
+    switch (ex.type)
+    {
+    case _X1LogType::Assert:
+        LogColor = FColor::Red;
+        break;
+    case _X1LogType::Log:
+        LogColor = FColor::Yellow;
+        break;
+    }
+
     if (GEngine)
-        GEngine->AddOnScreenDebugMessage(id, 20.f, FColor::Red, message);
+        GEngine->AddOnScreenDebugMessage(id, 20.f, LogColor, message);
     if (bNew)
-        UE_LOG(LogAssert, Error, TEXT("%s"), *message);
+    {
+        switch (ex.type)
+        {
+        case _X1LogType::Assert:
+            UE_LOG(LogX1Assert, Error, TEXT("%s"), *message);
+            break;
+        case _X1LogType::Log:
+            UE_LOG(LogX1, Display, TEXT("%s"), *message);
+            break;
+        }
+    }
 }

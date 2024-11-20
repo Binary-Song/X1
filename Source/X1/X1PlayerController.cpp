@@ -7,6 +7,7 @@
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/Pawn.h"
 #include "EnhancedInputSubsystems.h"
+#include "GameFramework/PlayerController.h"
 #include "InputMappingContext.h"
 #include "InputAction.h"
 #include "Engine/LocalPlayer.h"
@@ -22,6 +23,7 @@
 #include "X1Assert.h"
 #include <cassert>
 #include <set>
+#include "X1BuildPiece.h"
 #include "X1Grabber.h"
 #include "X1Interactable.h"
 #include "X1TraceUtils.h"
@@ -30,11 +32,24 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "X1Zoom.h"
 #include "X1Format.h"
+#include "Engine/StaticMesh.h"
+#include "Components/StaticMeshComponent.h"
+#include "PhysicsEngine/PhysicsConstraintActor.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
+#include "X1BuildPiece.h"
+
 void AX1PlayerController::BeginPlay()
 {
     SetupInput();
     SetupCamera();
+    this->SetActorTickEnabled(true);
     this->SetShowMouseCursor(true);
+}
+
+void AX1PlayerController::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    UpdateGhost();
 }
 
 static void CheckSets(TSet<FName> &ActionNamesInMapping,
@@ -81,6 +96,7 @@ void AX1PlayerController::SetupInput()
         { TEXT("IA_X1Fly"),             {ETriggerEvent::Triggered,   &AX1PlayerController::OnInputAction_Fly          }},
         { TEXT("IA_X1SwitchFlyMode"),   {ETriggerEvent::Started,     &AX1PlayerController::OnInputAction_SwitchFlyMode}},
         { TEXT("IA_X1Zoom"),            {ETriggerEvent::Started,     &AX1PlayerController::OnInputAction_Zoom         }},
+        { TEXT("IA_X1Build"),           {ETriggerEvent::Started,     &AX1PlayerController::OnInputAction_Build        }},
     };
     // clang-format on
 
@@ -154,6 +170,11 @@ void AX1PlayerController::OnInputAction_Zoom(
     this->HandleInput_Zoom(-50 * Instance.GetValue().Get<float>());
 }
 
+void AX1PlayerController::OnInputAction_Build(
+    const struct FInputActionInstance &Instance)
+{
+}
+
 // 注意区别： ControlRotation 是视角朝向， Actor 的 forward 是角色模型的朝向
 // 移动的方向应该基于视角的朝向。
 
@@ -187,6 +208,7 @@ void AX1PlayerController::HandleInput_Yaw(float Value)
         return;
     X1_ASSERT_RET_VOID(GetPawn());
     this->AddYawInput(Value);
+    //   this->UpdateGhost();
 }
 
 void AX1PlayerController::HandleInput_Pitch(float Value)
@@ -195,6 +217,7 @@ void AX1PlayerController::HandleInput_Pitch(float Value)
         return;
     X1_ASSERT_RET_VOID(GetPawn());
     this->AddPitchInput(Value);
+    //   this->UpdateGhost();
 }
 
 void AX1PlayerController::HandleInput_Interact(float Value)
@@ -226,23 +249,67 @@ void AX1PlayerController::HandleInput_Interact(float Value)
     if (!FindResult.bFound)
         return;
 
-    const EInteractType IT =
-        IX1Interactable::Execute_InteractType(FindResult.Item.Actor);
-    if (IT == EInteractType::Pickup)
-    {
-        X1_ASSERT_RET_VOID(GetPawn());
-        X1_ASSERT_RET_VOID(GetPawn()->Implements<UX1Grabber>());
+    UStaticMeshComponent *StaticMeshComponent =
+        FindResult.Item.Actor->FindComponentByClass<UStaticMeshComponent>();
+    X1_ASSERT_RET_VOID(StaticMeshComponent);
+    //this->CurrentBuildingMesh = StaticMeshComponent;
+    //this->CurrentBuildingMesh->SetCollisionEnabled(
+    //    ECollisionEnabled::NoCollision);
 
-        const FX1GrabParam GrabParam = [&]() {
-            FX1GrabParam P;
-            P.GrabbedBoneName = FindResult.Item.HitResult.BoneName;
-            P.GrabbedComponent = FindResult.Item.HitResult.Component.Get();
-            return P;
-        }();
+    auto TargetActor = FindResult.Item.Actor;
+    X1_ASSERT_RET_VOID(TargetActor);
 
-        IX1Grabber::Execute_Ungrab(GetPawn());
-        IX1Grabber::Execute_Grab(GetPawn(), GrabParam);
-    }
+    if (Actor1)
+        Actor2 = TargetActor;
+    else
+        Actor1 = TargetActor;
+    X1_ASSERT_RET_VOID(Actor1);
+    X1_ASSERT_RET_VOID(Actor2);
+
+    auto pc1 = Actor1->FindComponentByClass<UX1BuildPiece>();
+    auto pc2 = Actor2->FindComponentByClass<UX1BuildPiece>();
+    X1_ASSERT_RET_VOID(pc1);
+    X1_ASSERT_RET_VOID(pc2);
+
+    UX1BuildPiece::Attach(pc1, TEXT("DefaultPort"), pc2,
+                          TEXT("DefaultPort"));
+
+    // Create a physics constraint actor
+    APhysicsConstraintActor* ConstraintActor = GetWorld()->SpawnActor<APhysicsConstraintActor>();
+    X1_ASSERT_RET_VOID(ConstraintActor);
+
+    // Attach the constraint actor to the first actor
+    ConstraintActor->AttachToComponent(Actor1->GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
+
+    // Set up the constraint component
+    UPhysicsConstraintComponent* ConstraintComp = ConstraintActor->GetConstraintComp();
+    X1_ASSERT_RET_VOID(ConstraintComp);
+
+    // Connect the two ports
+    ConstraintComp->SetConstrainedComponents(
+        Actor1->FindComponentByClass<UPrimitiveComponent>(), TEXT("DefaultPort"),
+        Actor2->FindComponentByClass<UPrimitiveComponent>(), TEXT("DefaultPort")
+    );
+
+    // todo: PickUp Logic commented out.
+
+    // const EInteractType IT =
+    //     IX1Interactable::Execute_InteractType(FindResult.Item.Actor);
+    // if (IT == EInteractType::Pickup)
+    // {
+    //     X1_ASSERT_RET_VOID(GetPawn());
+    //     X1_ASSERT_RET_VOID(GetPawn()->Implements<UX1Grabber>());
+
+    //     const FX1GrabParam GrabParam = [&]() {
+    //         FX1GrabParam P;
+    //         P.GrabbedBoneName = FindResult.Item.HitResult.BoneName;
+    //         P.GrabbedComponent = FindResult.Item.HitResult.Component.Get();
+    //         return P;
+    //     }();
+
+    //     IX1Grabber::Execute_Ungrab(GetPawn());
+    //     IX1Grabber::Execute_Grab(GetPawn(), GrabParam);
+    // }
 }
 
 void AX1PlayerController::HandleInput_Fly(float value)
@@ -269,4 +336,32 @@ void AX1PlayerController::HandleInput_Zoom(float value)
     X1_ASSERT_RET_VOID(GetPawn());
     X1_ASSERT_RET_VOID(GetPawn()->Implements<UX1Zoom>());
     IX1Zoom::Execute_Zoom(GetPawn(), value);
+}
+
+void AX1PlayerController::UpdateGhost()
+{
+    // Get the mouse position in screen space
+    FVector2D MousePosition;
+    if (!GetMousePosition(MousePosition.X, MousePosition.Y))
+        return;
+    // X1_LOG("X = {0}, Y = {1}", MousePosition.X, MousePosition.Y);
+
+    if (!this->CurrentBuildingMesh)
+        return;
+
+    // Convert the mouse position to world space
+    FVector WorldLocation, WorldDirection;
+    if (!DeprojectScreenPositionToWorld(MousePosition.X, MousePosition.Y,
+                                        WorldLocation, WorldDirection))
+        return;
+
+    // Trace from the camera to the world position
+    FHitResult HitResult;
+    if (!GetWorld()->LineTraceSingleByChannel(
+            HitResult, WorldLocation, WorldLocation + WorldDirection * 10000.f,
+            ECC_Visibility))
+        return;
+
+    // Move the mesh to the hit location
+    this->CurrentBuildingMesh->SetWorldLocation(HitResult.Location);
 }
