@@ -9,7 +9,7 @@
 #include "Engine/StaticMesh.h"
 #include "X1BuildPiece.generated.h"
 
-UCLASS()
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class X1_API UX1BuildPiece : public UActorComponent
 {
     GENERATED_BODY()

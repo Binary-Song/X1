@@ -114,8 +114,8 @@ void AX1PlayerController::SetupInput()
         const FName ActionName = Map.Action.GetFName();
         if (ActionData *Data = ActionNames.Find(ActionName))
         {
-            EnhancedInputComponent->BindAction(Map.Action, Data->Trigger, this,
-                                               Data->Callback);
+            EnhancedInputComponent->BindAction(
+                Map.Action, Data->Trigger, this, Data->Callback);
         }
     }
 };
@@ -238,8 +238,9 @@ void AX1PlayerController::HandleInput_Interact(float Value)
     FX1TraceSearchResult SearchResult;
     FX1TraceUtils::TraceSearch(SearchResult, this, SearchParams);
     auto FindResult = UX1CollectionUtil::FindMinElement(
-        SearchResult.Items, [](const FX1CameraTraceSearchItem &a,
-                               const FX1CameraTraceSearchItem &b) {
+        SearchResult.Items,
+        [](const FX1CameraTraceSearchItem &a,
+           const FX1CameraTraceSearchItem &b) {
             return FVector2D{a.RotOffset.Yaw, a.RotOffset.Pitch}
                        .SquaredLength() <
                    FVector2D{b.RotOffset.Yaw, b.RotOffset.Pitch}
@@ -252,9 +253,9 @@ void AX1PlayerController::HandleInput_Interact(float Value)
     UStaticMeshComponent *StaticMeshComponent =
         FindResult.Item.Actor->FindComponentByClass<UStaticMeshComponent>();
     X1_ASSERT_RET_VOID(StaticMeshComponent);
-    //this->CurrentBuildingMesh = StaticMeshComponent;
-    //this->CurrentBuildingMesh->SetCollisionEnabled(
-    //    ECollisionEnabled::NoCollision);
+    // this->CurrentBuildingMesh = StaticMeshComponent;
+    // this->CurrentBuildingMesh->SetCollisionEnabled(
+    //     ECollisionEnabled::NoCollision);
 
     auto TargetActor = FindResult.Item.Actor;
     X1_ASSERT_RET_VOID(TargetActor);
@@ -271,25 +272,8 @@ void AX1PlayerController::HandleInput_Interact(float Value)
     X1_ASSERT_RET_VOID(pc1);
     X1_ASSERT_RET_VOID(pc2);
 
-    UX1BuildPiece::Attach(pc1, TEXT("DefaultPort"), pc2,
-                          TEXT("DefaultPort"));
-
-    // Create a physics constraint actor
-    APhysicsConstraintActor* ConstraintActor = GetWorld()->SpawnActor<APhysicsConstraintActor>();
-    X1_ASSERT_RET_VOID(ConstraintActor);
-
-    // Attach the constraint actor to the first actor
-    ConstraintActor->AttachToComponent(Actor1->GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
-
-    // Set up the constraint component
-    UPhysicsConstraintComponent* ConstraintComp = ConstraintActor->GetConstraintComp();
-    X1_ASSERT_RET_VOID(ConstraintComp);
-
-    // Connect the two ports
-    ConstraintComp->SetConstrainedComponents(
-        Actor1->FindComponentByClass<UPrimitiveComponent>(), TEXT("DefaultPort"),
-        Actor2->FindComponentByClass<UPrimitiveComponent>(), TEXT("DefaultPort")
-    );
+    X1_ASSERT_RET_VOID(UX1BuildPiece::Attach(
+        pc1, TEXT("DefaultPort"), pc2, TEXT("DefaultPort")));
 
     // todo: PickUp Logic commented out.
 
@@ -351,14 +335,16 @@ void AX1PlayerController::UpdateGhost()
 
     // Convert the mouse position to world space
     FVector WorldLocation, WorldDirection;
-    if (!DeprojectScreenPositionToWorld(MousePosition.X, MousePosition.Y,
-                                        WorldLocation, WorldDirection))
+    if (!DeprojectScreenPositionToWorld(
+            MousePosition.X, MousePosition.Y, WorldLocation, WorldDirection))
         return;
 
     // Trace from the camera to the world position
     FHitResult HitResult;
     if (!GetWorld()->LineTraceSingleByChannel(
-            HitResult, WorldLocation, WorldLocation + WorldDirection * 10000.f,
+            HitResult,
+            WorldLocation,
+            WorldLocation + WorldDirection * 10000.f,
             ECC_Visibility))
         return;
 
