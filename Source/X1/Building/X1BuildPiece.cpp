@@ -6,7 +6,7 @@
 #include "Math/UnrealMathUtility.h"
 
 #include "Templates/Casts.h"
-#include "X1Assert.h"
+#include "../X1Assert.h"
 #include "GameFramework/Actor.h"
 #include "Components/StaticMeshComponent.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
@@ -132,17 +132,21 @@ bool UX1BuildPiece::SetupConstraint(UX1BuildPiece *Piece1,
         ConstraintActor->GetConstraintComp();
     X1_ASSERT_RET_EMPTY(ConstraintComp);
 
-    auto pc1 = SocketMesh1->GetOwner()->FindComponentByClass<UStaticMeshComponent>();
-    auto pc2 = SocketMesh2->GetOwner()->FindComponentByClass<UStaticMeshComponent>();
+    auto pc1 =
+        SocketMesh1->GetOwner()->FindComponentByClass<UStaticMeshComponent>();
+    auto pc2 =
+        SocketMesh2->GetOwner()->FindComponentByClass<UStaticMeshComponent>();
     X1_ASSERT_RET_EMPTY(pc1);
     X1_ASSERT_RET_EMPTY(pc2);
 
     // Connect the two ports
-    ConstraintComp->SetConstrainedComponents(
-        pc1, NAME_None, pc2, NAME_None);
-        // Set constraint properties
-        ConstraintComp->SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Locked, 0.0f);
-        ConstraintComp->SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Locked, 0.0f);
-        ConstraintComp->SetAngularTwistLimit(EAngularConstraintMotion::ACM_Locked, 0.0f);
+    ConstraintComp->SetConstrainedComponents(pc1, NAME_None, pc2, NAME_None);
+    // Set constraint properties
+    ConstraintComp->SetAngularSwing1Limit(
+        EAngularConstraintMotion::ACM_Locked, 0.0f);
+    ConstraintComp->SetAngularSwing2Limit(
+        EAngularConstraintMotion::ACM_Locked, 0.0f);
+    ConstraintComp->SetAngularTwistLimit(
+        EAngularConstraintMotion::ACM_Locked, 0.0f);
     return true;
 }
