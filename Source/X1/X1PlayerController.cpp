@@ -44,6 +44,14 @@ void AX1PlayerController::BeginPlay()
     SetupCamera();
     this->SetActorTickEnabled(true);
     this->SetShowMouseCursor(true);
+
+    X1_ASSERT_RET_VOID(GetCharacter());
+    auto Movement = GetCharacter()->GetCharacterMovement();
+    X1_ASSERT_RET_VOID(Movement);
+    Movement->SetMovementMode(MOVE_Flying);
+
+    Movement->BrakingFrictionFactor = 5.0f;
+    Movement->BrakingDecelerationFlying = 5000.0f;
 }
 
 void AX1PlayerController::Tick(float DeltaTime)
@@ -90,6 +98,7 @@ void AX1PlayerController::SetupInput()
     TMap<FName, ActionData> ActionNames =
     {
         { TEXT("IA_X1Look"),            {ETriggerEvent::Triggered,   &AX1PlayerController::OnInputAction_Look         }},
+        { TEXT("IA_X1HoldToLook"),            {ETriggerEvent::Triggered,   nullptr}},
         { TEXT("IA_X1MoveForward"),     {ETriggerEvent::Triggered,   &AX1PlayerController::OnInputAction_MoveForward  }},
         { TEXT("IA_X1MoveRight"),       {ETriggerEvent::Triggered,   &AX1PlayerController::OnInputAction_MoveRight    }},
         { TEXT("IA_X1Interact"),        {ETriggerEvent::Started,     &AX1PlayerController::OnInputAction_Interact     }},
@@ -114,16 +123,19 @@ void AX1PlayerController::SetupInput()
         const FName ActionName = Map.Action.GetFName();
         if (ActionData *Data = ActionNames.Find(ActionName))
         {
-            EnhancedInputComponent->BindAction(
-                Map.Action, Data->Trigger, this, Data->Callback);
+            if (Data->Callback)
+            {
+                EnhancedInputComponent->BindAction(
+                    Map.Action, Data->Trigger, this, Data->Callback);
+            }
         }
     }
 };
 void AX1PlayerController::SetupCamera()
 {
     X1_ASSERT_RET_VOID(PlayerCameraManager);
-    PlayerCameraManager->ViewPitchMin = -70.0f;
-    PlayerCameraManager->ViewPitchMax = 0.0f;
+    PlayerCameraManager->ViewPitchMin = -90.0f;
+    PlayerCameraManager->ViewPitchMax = 90.0f;
 }
 
 void AX1PlayerController::OnInputAction_MoveForward(
@@ -184,9 +196,7 @@ void AX1PlayerController::HandleInput_MoveForward(float Value)
         return;
     X1_ASSERT_RET_VOID(GetPawn());
     FRotator ControlRot = GetControlRotation();
-    FRotator ControlRot_YawOnly(0, ControlRot.Yaw, 0);
-    FVector ForwardVector =
-        FRotationMatrix(ControlRot_YawOnly).GetUnitAxis(EAxis::X);
+    FVector ForwardVector = FRotationMatrix(ControlRot).GetUnitAxis(EAxis::X);
     GetPawn()->AddMovementInput(ForwardVector, Value);
 }
 
@@ -196,9 +206,7 @@ void AX1PlayerController::HandleInput_MoveRight(float Value)
         return;
     X1_ASSERT_RET_VOID(GetPawn());
     FRotator ControlRot = GetControlRotation();
-    FRotator ControlRot_YawOnly(0, ControlRot.Yaw, 0);
-    FVector RightVector =
-        FRotationMatrix(ControlRot_YawOnly).GetUnitAxis(EAxis::Y);
+    FVector RightVector = FRotationMatrix(ControlRot).GetUnitAxis(EAxis::Y);
     GetPawn()->AddMovementInput(RightVector, Value);
 }
 
@@ -304,15 +312,6 @@ void AX1PlayerController::HandleInput_Fly(float value)
 
 void AX1PlayerController::HandleInput_SwitchFlyMode()
 {
-    X1_ASSERT_RET_VOID(GetCharacter());
-    auto Movement = GetCharacter()->GetCharacterMovement();
-    X1_ASSERT_RET_VOID(Movement);
-    if (!bIsFlying)
-        Movement->SetMovementMode(MOVE_Flying);
-    else
-        Movement->SetMovementMode(MOVE_Walking);
-    bIsFlying = !bIsFlying;
-    Movement->BrakingDecelerationFlying = 2048.0f;
 }
 
 void AX1PlayerController::HandleInput_Zoom(float value)
