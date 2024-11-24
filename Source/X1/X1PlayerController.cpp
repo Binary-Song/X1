@@ -23,7 +23,7 @@
 #include "X1Assert.h"
 #include <cassert>
 #include <set>
-#include "X1BuildPiece.h"
+#include "Building/X1BuildPiece.h"
 #include "X1Grabber.h"
 #include "X1Interactable.h"
 #include "X1TraceUtils.h"

@@ -18,31 +18,30 @@ public:
     // Sets default values for this component's properties
     UX1BuildPiece();
 
+    static bool Attach(UX1BuildPiece *Piece1,
+                       FName Port1,
+                       UX1BuildPiece *Piece2,
+                       FName Port2);
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TArray<FName> Ports;
+
+private:
+    virtual void BeginPlay() override;
     virtual void TickComponent(
         float DeltaTime,
         ELevelTick TickType,
         FActorComponentTickFunction *ThisTickFunction) override;
-
-    static bool Attach(UX1BuildPiece *Piece1,
-                       FName Socket1,
-                       UX1BuildPiece *Piece2,
-                       FName Socket2);
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TArray<FName> SocketComponents;
-
-private:
-    virtual void BeginPlay() override;
     static bool RotateFaceToFace(UX1BuildPiece *Piece1,
-                                 FName Socket1Name,
+                                 FName Port1,
                                  UX1BuildPiece *Piece2,
-                                 FName Socket2Name);
+                                 FName Port2);
     static bool AlignLocation(UX1BuildPiece *Piece1,
-                              FName Socket1Name,
+                              FName Port1,
                               UX1BuildPiece *Piece2,
-                              FName Socket2Name);
+                              FName Port2);
     static bool SetupConstraint(UX1BuildPiece *Piece1,
-                                FName Socket1Name,
+                                FName Port1,
                                 UX1BuildPiece *Piece2,
-                                FName Socket2Name);
+                                FName Port2);
 };
