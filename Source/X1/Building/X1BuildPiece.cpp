@@ -5,13 +5,13 @@
 #include "Math/MathFwd.h"
 #include "Math/UnrealMathUtility.h"
 
-#include "Templates/Casts.h"
 #include "../X1Assert.h"
-#include "GameFramework/Actor.h"
 #include "Components/StaticMeshComponent.h"
-#include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "Engine/World.h"
+#include "GameFramework/Actor.h"
 #include "PhysicsEngine/PhysicsConstraintActor.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
+#include "Templates/Casts.h"
 
 static UStaticMeshComponent *GetSocketMesh(UX1BuildPiece *Piece,
                                            FName SocketName)
@@ -47,15 +47,16 @@ void UX1BuildPiece::TickComponent(float DeltaTime,
 bool UX1BuildPiece::Attach(UX1BuildPiece *Piece1,
                            FName Socket1Name,
                            UX1BuildPiece *Piece2,
-                           FName Socket2Name)
+                           FName Socket2Name,
+                           bool SetupConstraints)
 {
     if (!RotateFaceToFace(Piece1, Socket1Name, Piece2, Socket2Name))
         return false;
     if (!AlignLocation(Piece1, Socket1Name, Piece2, Socket2Name))
         return false;
-    if (!SetupConstraint(Piece1, Socket1Name, Piece2, Socket2Name))
+    if (SetupConstraints &&
+        !SetupConstraint(Piece1, Socket1Name, Piece2, Socket2Name))
         return false;
-    X1_LOG("Successfully Attached");
     return true;
 }
 

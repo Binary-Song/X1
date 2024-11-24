@@ -21,7 +21,8 @@ public:
     static bool Attach(UX1BuildPiece *Piece1,
                        FName Port1,
                        UX1BuildPiece *Piece2,
-                       FName Port2);
+                       FName Port2,
+                       bool SetupConstraints);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TArray<FName> Ports;

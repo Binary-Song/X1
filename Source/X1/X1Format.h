@@ -14,7 +14,7 @@ template <typename T> FString DbgFmt(const T &Data)
     return DefaultFmt(Data);
 }
 
-FString DbgFmt(const FName &Data)
+inline FString DbgFmt(const FName &Data)
 {
     return DefaultFmt(Data.ToString());
 }

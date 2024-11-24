@@ -89,6 +89,7 @@ public:
 #define _X1_LOGEXTRA_LR _X1LogExtras(_X1LogType::Log, true)
 #define _X1_RETURN_RV return
 #define _X1_RETURN_RE return {}
+#define _X1_RETURN_GO goto fail;
 #define _X1_RETURN_CO continue
 #define _X1_RETURN_PA ;
 
@@ -111,6 +112,13 @@ public:
 // (2) (Foo>0, "Foo must be greater than 0!")
 // (3) (Foo>0, "Foo={0}. Foo must be greater than 0!", Foo)
 #define X1_ASSERT_CONTINUE(...)     _X1_ASSERT(_X1_LOGEXTRA_AS, _X1_RETURN_CO, __VA_ARGS__)
+// 当条件不满足时，在屏幕和Log输出消息，并 goto fail （不会导致程序崩溃）。
+// 示例语法：
+// (1) (Foo>0)
+// (2) (Foo>0, "Foo must be greater than 0!")
+// (3) (Foo>0, "Foo={0}. Foo must be greater than 0!", Foo)
+#define X1_ASSERT_GOTO(...)     _X1_ASSERT(_X1_LOGEXTRA_AS, _X1_RETURN_GO, __VA_ARGS__)
+
 // 当条件不满足时，在屏幕和Log输出消息，并继续执行（不会导致程序崩溃）。
 // 示例语法：
 // (1) (Foo>0)
@@ -128,3 +136,9 @@ public:
 // (2) ("Hello world! Foo={0}!", Foo)
 #define X1_LOG_REPEAT(...)     _X1_ASSERT(_X1_LOGEXTRA_LR, _X1_RETURN_PA, 0, __VA_ARGS__)
 // clang-format on
+
+
+#define X1_ASSERT_RV X1_ASSERT_RET_VOID
+#define X1_ASSERT_RE X1_ASSERT_RET_EMPTY
+#define X1_ASSERT_C X1_ASSERT_CONTINUE
+#define X1_ASSERT_P X1_ASSERT_PASS

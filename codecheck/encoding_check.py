@@ -40,6 +40,11 @@ def check_diff(repo_path : Path, incremental=False):
                 bad_file_set.add(current_file)
                 logging.error(f"BOM in file {current_file}, see {diff_path}:{i}.")
             ok = False
+        if line.startswith(b'+') and b'X1_LOG' in line and 'Assert' not in current_file and current_file.endswith("cpp"):
+            if current_file not in bad_file_set:
+                bad_file_set.add(current_file)
+                logging.error(f"X1_LOG in {current_file}, see {diff_path}:{i}.")
+            ok = False
 
     return ok
 

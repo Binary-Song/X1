@@ -3,10 +3,15 @@ Language:        Cpp
 BasedOnStyle:  Microsoft
 IndentAccessModifiers: false
 AccessModifierOffset: -4
-SortIncludes: false
+SortIncludes: true
 QualifierAlignment: Left
 ColumnLimit: 80
 AllowShortFunctionsOnASingleLine: None
 BinPackArguments: false
 BinPackParameters: false
 PenaltyBreakBeforeFirstCallParameter: 0
+IncludeCategories:
+  - Regex:           '.*\.generated\.h'
+    Priority:        9999
+  - Regex:           '.*'
+    Priority:        1
