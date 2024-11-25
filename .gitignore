@@ -16,3 +16,6 @@ log
 compile_commands.json
 .scripts
 .cache
+CMakeLists.txt
+__pycache__
+build

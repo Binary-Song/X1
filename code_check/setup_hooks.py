@@ -8,7 +8,7 @@ else:
     python_cmd_name = 'python3'
 
 repo_path = (Path(__file__) / ".." / "..").resolve()
-check_script_path = repo_path / "codecheck" / "encoding_check.py"
+check_script_path = repo_path / "code_check" / "main.py"
 
 precommit_hook_content = f'''#!/bin/sh
 {python_cmd_name} "{check_script_path}"

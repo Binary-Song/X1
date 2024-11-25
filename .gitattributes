@@ -1,1 +1,10 @@
 Content/** filter=lfs diff=lfs merge=lfs -text
+
+[attr]c_cpp_chks chk_no_log
+
+# Enable checks for all text and binary files
+* chk_no_cr chk_no_bom chk_no_binary_outside_lfs
+
+# Enable checks for c++
+*.cpp   c_cpp_chks
+*.h     c_cpp_chks
